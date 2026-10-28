@@ -163,12 +163,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(.separator())
         item("Activado", #selector(toggleEnabled), on: Settings.enabled)
-        item("Mantener despierto con el cargador", #selector(toggleAC), on: Settings.keepOnAC)
+        item("Con cargador, esperar la pantalla sin límite", #selector(toggleAC), on: Settings.keepOnAC)
         choices("Margen con la tapa cerrada sin pantalla", [0, 2, 5, 10, 15, 30],
                 current: Settings.graceMinutes, label: { $0 == 0 ? "Ninguno (reposo al cerrar)" : "\($0) min" },
                 #selector(setGrace(_:)))
-        choices("Reposo por inactividad (tapa abierta)", [5, 10, 15, 30, 60, 0],
-                current: Settings.idleSleepMinutes, label: { $0 == 0 ? "Nunca" : "\($0) min" },
+        choices("Reposo por inactividad (tapa abierta)", [-1, 5, 10, 15, 30, 60, 0],
+                current: Settings.idleSleepMinutes,
+                label: { $0 < 0 ? "Como en Ajustes del Sistema" : ($0 == 0 ? "Nunca" : "\($0) min") },
                 #selector(setIdle(_:)))
         choices("Dormir si la batería baja de", [5, 10, 15, 20, 30],
                 current: Settings.minBattery, label: { "\($0) %" },
@@ -194,7 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func toggleEnabled() { Settings.enabled.toggle(); Controller.shared.evaluate("ajuste") }
     @objc private func toggleAC() { Settings.keepOnAC.toggle(); Controller.shared.evaluate("ajuste") }
     @objc private func setGrace(_ s: NSMenuItem) { Settings.graceMinutes = s.representedObject as? Int ?? 5; Controller.shared.evaluate("ajuste") }
-    @objc private func setIdle(_ s: NSMenuItem) { Settings.idleSleepMinutes = s.representedObject as? Int ?? 10; Controller.shared.evaluate("ajuste") }
+    @objc private func setIdle(_ s: NSMenuItem) { Settings.idleSleepMinutes = s.representedObject as? Int ?? -1; Controller.shared.evaluate("ajuste") }
     @objc private func setMinBattery(_ s: NSMenuItem) { Settings.minBattery = s.representedObject as? Int ?? 15; Controller.shared.evaluate("ajuste") }
     @objc private func toggleACWake() { PMSet.setACWake(!PMSet.acWakeEnabled()) }
     @objc private func toggleLogin() { LoginItem.setEnabled(!LoginItem.isEnabled) }

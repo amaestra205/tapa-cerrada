@@ -14,9 +14,9 @@ enum Settings {
     static func register() {
         d.register(defaults: [
             "enabled": true,
-            "keepOnAC": true,
+            "keepOnAC": false,
             "graceMinutes": 5,
-            "idleSleepMinutes": 10,
+            "idleSleepMinutes": -1,   // -1 = el mismo tiempo que en Ajustes del Sistema
             "minBattery": 15,
         ])
     }
@@ -156,8 +156,13 @@ enum PMSet {
         return st == 0
     }
 
-    static var acWakeSupported: Bool {
+    static let acWakeSupported: Bool = {
         run("/usr/bin/pmset", ["-g", "cap"]).1.contains("acwake")
+    }()
+
+    /// Minutos de reposo por inactividad configurados en Ajustes (fuente de energía actual). 0 = nunca.
+    static func systemIdleSleepMinutes() -> Int? {
+        setting("sleep").flatMap { Int($0) }
     }
     static func acWakeEnabled() -> Bool { setting("acwake") == "1" }
     @discardableResult

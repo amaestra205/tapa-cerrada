@@ -24,9 +24,9 @@ Apps como Amphetamine lo arreglan a medias: hay que abrir el Mac y activar una s
 | Situación | Qué hace |
 |---|---|
 | Hay una pantalla externa conectada | No se duerme, aunque cierres la tapa |
-| Está con el cargador (opcional) | Puedes cerrar la tapa sin que se duerma |
-| En batería, cierras la tapa sin pantalla | Te da un margen (5 min por defecto) para conectarla; si no, se duerme |
-| En batería, tapa abierta y sin usarlo | Se duerme por inactividad como siempre (salvo vídeo o música) |
+| Cierras la tapa sin pantalla | Te da un margen (5 min por defecto) para conectarla; si no, se duerme |
+| Con cargador (opcional) | Puede esperar la pantalla con la tapa cerrada sin límite de tiempo |
+| Tapa abierta y sin usarlo | Se duerme por inactividad con el tiempo de tus Ajustes (salvo vídeo o música) |
 | Batería por debajo del mínimo (15 %) | Reposo normal |
 | Cierras la app | Se restaura siempre el reposo normal |
 
@@ -34,7 +34,7 @@ El icono de la taza se rellena cuando el reposo está bloqueado.
 
 ## Instalación
 
-Requiere **macOS 14 Sonoma o posterior**, en Apple Silicon o Intel.
+Requiere un **MacBook** con **macOS 14 Sonoma o posterior**, Apple Silicon o Intel.
 
 ### Opción A: descargar la app
 
@@ -64,9 +64,11 @@ cd tapa-cerrada
 ## Opciones del menú
 
 - **Activado**: interruptor general.
-- **Mantener despierto con el cargador**.
 - **Margen con la tapa cerrada sin pantalla**: ninguno, 2, 5, 10, 15 o 30 min.
-- **Reposo por inactividad (tapa abierta)**.
+- **Con cargador, esperar la pantalla sin límite**: desactivado por defecto para que
+  no se quede despierto toda la noche si lo cargas con la tapa cerrada.
+- **Reposo por inactividad (tapa abierta)**: por defecto, el mismo tiempo que en
+  Ajustes del Sistema.
 - **Dormir si la batería baja de…**
 - **Despertar al conectar el cargador**: si tu Mac lo admite. Sirve para
   cuando ya estaba dormido del todo.

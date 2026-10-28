@@ -8,7 +8,7 @@ private func displayCallback(_ display: CGDirectDisplayID, _ flags: CGDisplayCha
 }
 
 private func powerCallback(_ ctx: UnsafeMutableRawPointer?) {
-    DispatchQueue.main.async { MainActor.assumeIsolated { Controller.shared.evaluate("alimentación") } }
+    DispatchQueue.main.async { MainActor.assumeIsolated { Controller.shared.powerSourceChanged() } }
 }
 
 /// Decide si hay que bloquear el reposo (pmset disablesleep) según tapa, pantallas y batería.
@@ -26,6 +26,7 @@ final class Controller: NSObject {
     private var lidClosedSince: Date?
     private var lastSleepNow = Date.distantPast
     private var lastVerify = Date.distantPast
+    private var systemIdleMinutes: Int? = nil
     private var manualSleepAt: Date?
     private var manualSleep: Bool {
         guard let t = manualSleepAt else { return false }
@@ -36,6 +37,7 @@ final class Controller: NSObject {
     func start() {
         hasPermission = PMSet.hasPermission()
         sleepDisabled = PMSet.sleepDisabled()
+        systemIdleMinutes = PMSet.systemIdleSleepMinutes()
         lastVerify = Date()
 
         CGDisplayRegisterReconfigurationCallback(displayCallback, nil)
@@ -65,6 +67,11 @@ final class Controller: NSObject {
     }
 
     @objc private func screensChanged(_ n: Notification) { evaluate("pantallas") }
+
+    func powerSourceChanged() {
+        lastVerify = .distantPast
+        evaluate("alimentación")
+    }
 
     func permissionChanged() {
         hasPermission = PMSet.hasPermission()
@@ -104,6 +111,7 @@ final class Controller: NSObject {
         if Date().timeIntervalSince(lastVerify) > 60 {
             sleepDisabled = PMSet.sleepDisabled()
             hasPermission = PMSet.hasPermission()
+            systemIdleMinutes = PMSet.systemIdleSleepMinutes()
             lastVerify = Date()
         }
 
@@ -127,26 +135,34 @@ final class Controller: NSObject {
         notify()
     }
 
+    /// Minutos de inactividad tras los que dormir con la tapa abierta. nil o 0 = nunca.
+    private var idleLimitMinutes: Int? {
+        let v = Settings.idleSleepMinutes
+        return v < 0 ? systemIdleMinutes : v
+    }
+
     /// (bloquear reposo, motivo, dormir ya)
     private func decide() -> (Bool, String, Bool) {
         if manualSleep { return (false, "Durmiendo a petición tuya", false) }
         if !Settings.enabled { return (false, "Desactivado", false) }
+        // Mac de sobremesa: no hay tapa que cerrar, no hacemos nada.
+        if !power.hasBattery { return (false, "Este Mac no tiene tapa: no hace falta", false) }
 
-        let onBattery = power.hasBattery && !power.onAC
-        if onBattery, let p = power.percent, p <= Settings.minBattery {
+        if !power.onAC, let p = power.percent, p <= Settings.minBattery {
             return (false, "Batería baja (\(p) %): reposo normal", lidClosed)
         }
         if externalDisplays > 0 {
             return (true, externalDisplays == 1 ? "Pantalla externa conectada" : "\(externalDisplays) pantallas externas", false)
         }
-        if power.onAC && Settings.keepOnAC {
-            return (true, "Con cargador: puedes cerrar la tapa", false)
-        }
 
+        let waitForever = power.onAC && Settings.keepOnAC
         let grace = Settings.graceMinutes
-        if grace <= 0 { return (false, "Sin pantalla: reposo normal", false) }
 
-        if lidClosed, let since = lidClosedSince {
+        if lidClosed {
+            if waitForever { return (true, "Tapa cerrada con cargador: esperando pantalla", false) }
+            guard grace > 0, let since = lidClosedSince else {
+                return (false, "Tapa cerrada sin pantalla: reposo", true)
+            }
             let left = Double(grace) * 60 - Date().timeIntervalSince(since)
             if left > 0 {
                 return (true, "Tapa cerrada: esperando pantalla (\(Int(ceil(left / 60))) min)", false)
@@ -154,13 +170,15 @@ final class Controller: NSObject {
             return (false, "Sin pantalla tras \(grace) min: a dormir", true)
         }
 
-        // Tapa abierta en batería: mantenemos el bloqueo para que cerrar la tapa no duerma
-        // al instante, y hacemos nosotros el reposo por inactividad.
-        let idleLimit = Settings.idleSleepMinutes
-        if idleLimit > 0,
-           SystemState.idleSeconds() >= Double(idleLimit) * 60,
+        // Tapa abierta. Sin margen: dejamos que macOS duerma al cerrar la tapa, como siempre.
+        if grace <= 0 && !waitForever { return (false, "Reposo normal al cerrar la tapa", false) }
+
+        // Mantenemos el bloqueo para que cerrar la tapa no duerma al instante, y hacemos
+        // nosotros el reposo por inactividad (macOS no puede mientras está bloqueado).
+        if let limit = idleLimitMinutes, limit > 0,
+           SystemState.idleSeconds() >= Double(limit) * 60,
            !SystemState.otherAppsPreventSleep() {
-            return (false, "Inactivo \(idleLimit) min: a dormir", true)
+            return (false, "Inactivo \(limit) min: a dormir", true)
         }
         return (true, "Listo: cierra la tapa y conecta la pantalla", false)
     }

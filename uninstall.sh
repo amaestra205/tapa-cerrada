@@ -2,6 +2,7 @@
 # Desinstala Tapa Cerrada y deja el reposo del Mac como estaba.
 set -uo pipefail
 echo "Cerrando Tapa Cerrada…"
+launchctl bootout "gui/$(id -u)/com.alejandro.tapacerrada.agent" 2>/dev/null || true
 pkill -x TapaCerrada 2>/dev/null || true
 sleep 1
 echo "Restaurando el reposo y quitando el permiso (pide tu contraseña)…"
