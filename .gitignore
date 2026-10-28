@@ -1,0 +1,7 @@
+build/
+dist/
+build.log
+build.prev.log
+.DS_Store
+*.xcuserstate
+.Rhistory
